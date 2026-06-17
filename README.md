@@ -74,9 +74,13 @@ npm run tauri android init     # gera o projeto Android
 npm run tauri android dev      # roda no celular conectado
 ```
 
+O workflow de release roda `bash scripts/setup-android-mic.sh` depois do init. Se
+voce compilar Android manualmente apos gerar o projeto, rode o mesmo script antes
+do build. Ele injeta `RECORD_AUDIO`, `INTERNET`, `ACCESS_NETWORK_STATE`,
+`android:usesCleartextTraffic="true"` e a `MainActivity.kt` que concede o
+microfone ao WebView.
+
 Ainda falta (anotado no plano):
-- Permissões `RECORD_AUDIO` e `INTERNET` no `AndroidManifest.xml`.
-- Tratar o pedido de microfone do WebView (`onPermissionRequest`).
 - **Fase futura:** serviço em *background* + botão de PTT na **barra de notificação**
   (precisa de código nativo Kotlin).
 

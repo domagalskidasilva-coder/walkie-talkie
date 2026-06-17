@@ -100,7 +100,7 @@ jobs:
       - name: Gera o projeto Android
         run: npm run tauri android init
 
-      - name: Permissões de microfone (manifest + MainActivity)
+      - name: Permissoes Android (manifest + MainActivity)
         run: bash scripts/setup-android-mic.sh
 
       - name: Compila o APK (debug, instalável)
