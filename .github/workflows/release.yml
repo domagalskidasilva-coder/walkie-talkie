@@ -1,0 +1,116 @@
+name: release
+
+# Dispara ao enviar uma tag tipo v0.1.0 (ou manualmente).
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  # ----------------------------------------------------------------------------
+  # PC: Windows (.msi/.exe) e Linux (.AppImage/.deb) -> cria a Release
+  # ----------------------------------------------------------------------------
+  desktop:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+          - platform: ubuntu-22.04
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dependências do Linux
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./src-tauri -> target
+
+      - run: npm ci
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "Walkie-Talkie ${{ github.ref_name }}"
+          releaseBody: |
+            ## 📥 Downloads
+            - **Windows:** arquivo `.msi` ou `.exe` (Setup) abaixo.
+            - **Linux:** `.AppImage` (universal) ou `.deb` (Debian/Ubuntu).
+            - **Android:** `walkie-talkie.apk` (precisa permitir "fontes desconhecidas").
+
+            Veja o README para como usar (host por IP na mesma WiFi).
+          releaseDraft: false
+          prerelease: false
+
+  # ----------------------------------------------------------------------------
+  # Android: APK debug instalável (assinado com a chave de debug)
+  # Anexa o .apk na mesma Release criada pelo job desktop.
+  # ----------------------------------------------------------------------------
+  android:
+    needs: desktop
+    permissions:
+      contents: write
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Instala plataforma + NDK
+        run: |
+          sdkmanager --install "platforms;android-34" "build-tools;34.0.0" "ndk;26.1.10909125" "platform-tools"
+          echo "NDK_HOME=$ANDROID_SDK_ROOT/ndk/26.1.10909125" >> $GITHUB_ENV
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./src-tauri -> target
+
+      - run: npm ci
+
+      - name: Gera o projeto Android
+        run: npm run tauri android init
+
+      - name: Permissões de microfone (manifest + MainActivity)
+        run: bash scripts/setup-android-mic.sh
+
+      - name: Compila o APK (debug, instalável)
+        run: npm run tauri android build -- --apk --debug --target aarch64
+
+      - name: Renomeia e envia o APK pra Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          APK=$(find src-tauri/gen/android -name "*.apk" | grep -i debug | head -1)
+          echo "APK encontrado: $APK"
+          cp "$APK" walkie-talkie.apk
+          gh release upload "${{ github.ref_name }}" walkie-talkie.apk --clobber

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Walkie-Talkie // CYBER_LINK</title>
+    <script type="module" src="/src/main.ts" defer></script>
+  </head>
+
+  <body>
+    <!-- BOOT SEQUENCE INIT -->
+    <div id="boot-screen" class="boot-screen">
+      <div class="terminal">
+        <p class="sys-msg">INIT_SYSTEM v9.0.2...</p>
+        <p class="sys-msg delay-1">LOADING KERNEL MODULES...</p>
+        <p class="sys-msg delay-2">ESTABLISHING SECURE CONNECTION...</p>
+        <p class="sys-msg delay-3">BYPASSING FIREWALLS [OK]</p>
+        <p class="sys-msg delay-4">ACCESS GRANTED.</p>
+        <div class="loader-bar"><div class="fill"></div></div>
+      </div>
+    </div>
+
+    <!-- MAIN APP -->
+    <main class="app hidden" id="main-app">
+      <div class="scanlines"></div>
+      
+      <header class="bar">
+        <h1><span class="glitch" data-text="WALKIE_TALKIE">WALKIE_TALKIE</span></h1>
+        <div class="status">
+          <span id="status-text" class="status-text">Desconectado</span>
+          <span id="status-dot" class="dot"></span>
+        </div>
+      </header>
+
+      <section class="card cyber-border">
+        <label>ID_DO_AGENTE
+          <input id="name" value="Você" class="cyber-input" />
+        </label>
+
+        <div class="grid">
+          <label>IP_DO_HOST
+            <input id="ip" placeholder="192.168.0.10" class="cyber-input" />
+          </label>
+          <label>PORTA
+            <input id="port" inputmode="numeric" class="cyber-input" />
+          </label>
+        </div>
+
+        <div class="row">
+          <button id="connect" class="btn primary-btn">Conectar</button>
+          <button id="host" class="btn ghost-btn">Ser host</button>
+        </div>
+        <p id="host-hint" class="hint"></p>
+      </section>
+
+      <div class="comms-wrapper">
+        <p id="talking" class="talking"></p>
+        
+        <button id="ptt" class="ptt cyber-button">
+          <div class="ptt-inner">
+            <span class="ptt-icon">🎙</span>
+            <span class="ptt-label">Segure para falar</span>
+          </div>
+          <div class="ripple"></div>
+        </button>
+      </div>
+
+      <section class="card settings cyber-border-dashed">
+        <label>GANHO_DE_ÁUDIO (Volume)
+          <input id="volume" type="range" min="0" max="1" step="0.05" value="1" class="cyber-range" />
+        </label>
+        <div class="grid">
+          <label>BIND_DE_HARDWARE (PC)
+            <input id="ptt-key" value="F8" class="cyber-input small-input" />
+          </label>
+          <button id="set-key" class="btn ghost-btn small">Aplicar</button>
+        </div>
+        <p class="hint">No PC dá para falar segurando a tecla acima mesmo com o app minimizado, ou a barra de espaço com a janela aberta.</p>
+      </section>
+    </main>
+  </body>
+</html>
