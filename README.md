@@ -3,6 +3,18 @@
 Walkie-talkie de voz por **WiFi** (mesma rede local), em **PC, Android e iOS**, feito
 em Tauri 2. Push-to-talk: **segura pra falar, solta pra ouvir** (half-duplex).
 
+## ⬇️ Baixar (última versão)
+
+> Página com todos os arquivos: **[Releases](https://github.com/domagalskidasilva-coder/walkie-talkie/releases/latest)**
+
+| Sistema | Arquivo |
+|---|---|
+| 📱 **Android** | **[walkie-talkie.apk](https://github.com/domagalskidasilva-coder/walkie-talkie/releases/latest/download/walkie-talkie.apk)** (permita "fontes desconhecidas" ao instalar) |
+| 🪟 **Windows** | `.msi` ou `.exe` na página de Releases |
+| 🐧 **Linux** | `.AppImage` (universal) ou `.deb` na página de Releases |
+
+Os builds são gerados automaticamente pelo GitHub Actions a cada tag `v*`.
+
 - **PC:** fala segurando uma **tecla** (padrão `F8`, funciona até com o app minimizado)
   ou a **barra de espaço** com a janela aberta. O app vai pra **bandeja** ao fechar.
 - **Celular:** fala segurando o **botão grande** na tela.
