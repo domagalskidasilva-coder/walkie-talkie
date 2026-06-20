@@ -57,9 +57,16 @@ npm run tauri dev
 ```
 
 ### Usar de qualquer lugar (internet)
-1. Faça o deploy do relay (veja [`server/`](server/) — Render tem deploy de 1 clique grátis).
-2. No app, em **SERVIDOR (RELAY)**, ponha `wss://SEU-RELAY` e escolha um **CANAL**.
-3. **Conectar** nos dois aparelhos (qualquer rede) → segure pra falar.
+O app **já vem configurado** com um relay público
+(`wss://walkie-talkie-relay.onrender.com`). Então:
+1. Escolha um **CANAL** (qualquer nome combinado) e **Conectar**.
+2. Faça o mesmo em qualquer outro aparelho, em qualquer rede → segure pra falar.
+
+> Quer seu próprio relay? Faça o deploy do [`server/`](server/) (Render tem deploy de
+> 1 clique grátis) e troque a URL no campo **SERVIDOR (RELAY)**.
+
+> ⏱️ O relay free do Render "dorme" após ~15 min ocioso; a primeira conexão pode
+> demorar alguns segundos pra acordar.
 
 ### Usar na mesma WiFi (offline, sem servidor)
 1. No aparelho A: clique **HOST LAN**. Ele mostra o endereço `ws://SEU-IP:7878`.

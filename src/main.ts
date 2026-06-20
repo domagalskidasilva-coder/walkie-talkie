@@ -5,8 +5,8 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import * as net from "./net";
 import * as audio from "./audio";
 
-// URL do relay público (preenchida após o deploy). Vazio = use HOST LAN.
-const DEFAULT_RELAY = "";
+// URL do relay público (deploy no Render). Vazio = use HOST LAN.
+const DEFAULT_RELAY = "wss://walkie-talkie-relay.onrender.com";
 const LAN_PORT = 7878;
 // Repositório das releases (usado pela verificação de atualização).
 const REPO = "domagalskidasilva-coder/walkie-talkie";
