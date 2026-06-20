@@ -1,0 +1,14 @@
+# Blueprint do Render para o relay público (gratuito).
+# Deploy: https://render.com -> New -> Blueprint -> aponte para este repo.
+# Depois é só pegar a URL (ex.: https://walkie-talkie-relay.onrender.com) e usar
+# no app como wss://walkie-talkie-relay.onrender.com
+services:
+  - type: web
+    name: walkie-talkie-relay
+    runtime: node
+    rootDir: server
+    plan: free
+    buildCommand: npm install
+    startCommand: node relay.mjs
+    healthCheckPath: /healthz
+    autoDeploy: true

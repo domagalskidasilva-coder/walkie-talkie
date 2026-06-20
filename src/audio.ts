@@ -1,10 +1,11 @@
 // Captura e reprodução de áudio com a Web Audio API.
 //
-// Captura e playback usam contextos a 48 kHz (taxa universalmente suportada em
-// WebViews de PC, Android e iOS). Como os dois lados usam a mesma taxa, não
-// precisa reamostrar. O formato na rede é PCM int16 mono.
+// Captura e playback usam a MESMA taxa nos dois lados, então não há reamostra-
+// gem. 16 kHz mono ("voz wideband") soa bem para fala e gasta ~3x menos banda
+// que 48 kHz — importante para funcionar pela internet/4G. O formato na rede é
+// PCM int16 mono.
 
-const RATE = 48000;
+const RATE = 16000;
 
 // --- Conversões PCM ---------------------------------------------------------
 

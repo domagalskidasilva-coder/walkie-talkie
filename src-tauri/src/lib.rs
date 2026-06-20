@@ -1,4 +1,4 @@
-mod relay;
+pub mod relay;
 
 use tauri::State;
 

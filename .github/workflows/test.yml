@@ -1,0 +1,46 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dependências do Tauri (Linux)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./src-tauri -> target
+
+      - run: npm ci
+
+      # Build do frontend: gera dist/ (necessário para compilar o lib Rust) e
+      # também valida os tipos (tsc).
+      - name: Build do frontend
+        run: npm run build
+
+      - name: Testes do cliente (vitest)
+        run: npm test
+
+      - name: Testes do servidor (relay)
+        run: |
+          npm --prefix server install
+          npm run test:server
+
+      - name: Testes do Rust (relay LAN)
+        run: cargo test --manifest-path src-tauri/Cargo.toml

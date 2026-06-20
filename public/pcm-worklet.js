@@ -1,16 +1,18 @@
 // AudioWorklet de captura.
 //
-// O navegador chama process() a cada 128 amostras (~2,7 ms a 48 kHz). Isso é
-// pequeno demais para mandar pela rede. Então acumulamos até FRAME amostras
-// (~40 ms) e mandamos um bloco maior para a thread principal de uma vez.
+// O navegador chama process() em blocos de 128 amostras (curtos demais para a
+// rede). Acumulamos ~40 ms e mandamos um bloco maior de uma vez. O tamanho é
+// derivado da taxa real do contexto (`sampleRate`), então funciona em qualquer
+// taxa sem virar latência alta.
 
-const FRAME = 2048; // amostras por bloco (~42 ms a 48 kHz)
+const FRAME_MS = 40;
 
 class CaptureProcessor extends AudioWorkletProcessor {
   constructor() {
     super();
     this._chunks = [];
     this._count = 0;
+    this._frame = Math.round((sampleRate * FRAME_MS) / 1000);
   }
 
   process(inputs) {
@@ -20,7 +22,7 @@ class CaptureProcessor extends AudioWorkletProcessor {
       this._chunks.push(new Float32Array(input[0]));
       this._count += input[0].length;
 
-      if (this._count >= FRAME) {
+      if (this._count >= this._frame) {
         const out = new Float32Array(this._count);
         let offset = 0;
         for (const c of this._chunks) {

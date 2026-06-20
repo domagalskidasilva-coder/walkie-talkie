@@ -3,45 +3,98 @@ import { listen } from "@tauri-apps/api/event";
 import * as net from "./net";
 import * as audio from "./audio";
 
-const DEFAULT_PORT = 7878;
+// URL do relay público (preenchida após o deploy). Vazio = use HOST LAN.
+const DEFAULT_RELAY = "";
+const LAN_PORT = 7878;
 
-// --- Atalhos de DOM ---------------------------------------------------------
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
 let nameInput: HTMLInputElement;
-let ipInput: HTMLInputElement;
-let portInput: HTMLInputElement;
+let serverInput: HTMLInputElement;
+let roomInput: HTMLInputElement;
 let connectBtn: HTMLButtonElement;
 let hostBtn: HTMLButtonElement;
 let statusDot: HTMLElement;
 let statusText: HTMLElement;
 let talkingText: HTMLElement;
+let rosterText: HTMLElement;
 let pttBtn: HTMLButtonElement;
 let volume: HTMLInputElement;
 let pttKeyInput: HTMLInputElement;
 let setKeyBtn: HTMLButtonElement;
 let hostHint: HTMLElement;
 
-// --- Estado -----------------------------------------------------------------
+let active = false; // o usuário quer estar conectado
 let hosting = false;
 let talking = false;
-const names = new Map<string, string>();
+const names = new Map<string, string>(); // id -> nome (quem está na sala)
 let talkClear: ReturnType<typeof setTimeout> | null = null;
 
-// --- Conexão ----------------------------------------------------------------
-function wsUrl(): string {
-  return `ws://${ipInput.value.trim()}:${portInput.value.trim()}`;
+// --- Persistência do último uso --------------------------------------------
+function persist() {
+  try {
+    localStorage.setItem(
+      "wt",
+      JSON.stringify({ name: nameInput.value, server: serverInput.value, room: roomInput.value })
+    );
+  } catch {
+    /* ignore */
+  }
+}
+function restore() {
+  try {
+    const s = JSON.parse(localStorage.getItem("wt") || "{}");
+    if (s.name) nameInput.value = s.name;
+    if (s.server) serverInput.value = s.server;
+    if (s.room) roomInput.value = s.room;
+  } catch {
+    /* ignore */
+  }
 }
 
+// --- Presença ---------------------------------------------------------------
+function renderRoster() {
+  const arr = [...names.values()];
+  rosterText.textContent = arr.length ? `🟢 Na sala (${arr.length}): ${arr.join(", ")}` : "";
+}
+
+function showTalking(who: string) {
+  talkingText.textContent = `🔊 ${who} falando…`;
+  if (talkClear) clearTimeout(talkClear);
+  talkClear = setTimeout(() => (talkingText.textContent = ""), 500);
+}
+
+// --- Conexão ----------------------------------------------------------------
 function doConnect() {
-  net.setName(nameInput.value.trim());
-  net.connect(wsUrl(), {
-    onStatus: (connected, info) => {
-      statusDot.classList.toggle("on", connected);
+  const url = serverInput.value.trim();
+  if (!url) {
+    statusText.textContent = "Informe o servidor ou use HOST LAN";
+    return;
+  }
+  persist();
+  names.clear();
+  renderRoster();
+  active = true;
+  connectBtn.textContent = "Desconectar";
+
+  net.connect(url, roomInput.value.trim(), nameInput.value.trim(), {
+    onStatus: (state, info) => {
+      statusDot.classList.toggle("on", state === "connected");
       statusText.textContent = info;
-      connectBtn.textContent = connected ? "Desconectar" : "Conectar";
     },
-    onHello: (id, name) => names.set(id, name),
+    onRoster: (peers) => {
+      names.clear();
+      for (const p of peers) names.set(p.id, p.name);
+      renderRoster();
+    },
+    onJoin: (id, name) => {
+      names.set(id, name);
+      renderRoster();
+    },
+    onLeave: (id) => {
+      names.delete(id);
+      renderRoster();
+    },
     onAudio: (id, pcm) => {
       if (!talking) audio.playPcm(pcm); // half-duplex: ignora enquanto falo
       showTalking(names.get(id) ?? id);
@@ -49,10 +102,12 @@ function doConnect() {
   });
 }
 
-function showTalking(who: string) {
-  talkingText.textContent = `🔊 ${who} falando…`;
-  if (talkClear) clearTimeout(talkClear);
-  talkClear = setTimeout(() => (talkingText.textContent = ""), 400);
+function doDisconnect() {
+  active = false;
+  connectBtn.textContent = "Conectar";
+  net.disconnect();
+  names.clear();
+  renderRoster();
 }
 
 // --- Push-to-talk -----------------------------------------------------------
@@ -85,43 +140,67 @@ function stopTalk() {
   audio.setMuted(false);
 }
 
+// --- Host LAN (relay embutido, sem internet) --------------------------------
+async function toggleHost() {
+  if (!hosting) {
+    try {
+      await invoke("start_host", { port: LAN_PORT });
+      hosting = true;
+      hostBtn.textContent = "Parar host";
+      serverInput.value = `ws://127.0.0.1:${LAN_PORT}`;
+      let ip = "SEU_IP";
+      try {
+        ip = await invoke<string>("get_local_ip");
+      } catch {
+        /* ignore */
+      }
+      hostHint.textContent = `Host ativo. Outros na MESMA WiFi conectam em: ws://${ip}:${LAN_PORT}`;
+      doConnect();
+    } catch (e) {
+      statusText.textContent = `${e}`;
+    }
+  } else {
+    doDisconnect();
+    try {
+      await invoke("stop_host");
+    } catch {
+      /* ignore */
+    }
+    hosting = false;
+    hostBtn.textContent = "Host LAN";
+    hostHint.textContent = "";
+  }
+}
+
 // --- Inicialização ----------------------------------------------------------
-window.addEventListener("DOMContentLoaded", async () => {
+window.addEventListener("DOMContentLoaded", () => {
   nameInput = $("name");
-  ipInput = $("ip");
-  portInput = $("port");
+  serverInput = $("server");
+  roomInput = $("room");
   connectBtn = $("connect");
   hostBtn = $("host");
   statusDot = $("status-dot");
   statusText = $("status-text");
   talkingText = $("talking");
+  rosterText = $("roster");
   pttBtn = $("ptt");
   volume = $("volume");
   pttKeyInput = $("ptt-key");
   setKeyBtn = $("set-key");
   hostHint = $("host-hint");
 
-  portInput.value = String(DEFAULT_PORT);
+  if (DEFAULT_RELAY) serverInput.value = DEFAULT_RELAY;
+  restore();
 
-  // Descobre o IP local (para você passar aos outros quando for host).
-  try {
-    const ip = await invoke<string>("get_local_ip");
-    ipInput.value = ip;
-    hostHint.textContent = `Seu IP nesta rede: ${ip} — os outros conectam em ${ip}:${DEFAULT_PORT}`;
-  } catch {
-    ipInput.value = "127.0.0.1";
-  }
-
-  // Botão grande de falar (mouse + toque).
+  // PTT por toque/mouse.
   pttBtn.addEventListener("pointerdown", (e) => {
     pttBtn.setPointerCapture(e.pointerId);
     startTalk();
   });
-  const release = () => stopTalk();
-  pttBtn.addEventListener("pointerup", release);
-  pttBtn.addEventListener("pointercancel", release);
+  pttBtn.addEventListener("pointerup", stopTalk);
+  pttBtn.addEventListener("pointercancel", stopTalk);
 
-  // Barra de espaço como PTT quando a janela está focada (e não digitando).
+  // PTT pela barra de espaço (janela focada, sem estar digitando).
   window.addEventListener("keydown", (e) => {
     if (e.code === "Space" && !isTyping(e.target) && !e.repeat) {
       e.preventDefault();
@@ -135,37 +214,17 @@ window.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // Atalho global vindo do Rust (funciona com o app minimizado, no PC).
+  // Atalho global vindo do Rust (PC, funciona minimizado).
   listen("ptt-down", () => startTalk());
   listen("ptt-up", () => stopTalk());
 
-  connectBtn.addEventListener("click", () => {
-    if (net.isConnected()) net.disconnect();
-    else doConnect();
-  });
-
-  hostBtn.addEventListener("click", async () => {
-    if (!hosting) {
-      try {
-        await invoke("start_host", { port: Number(portInput.value) });
-        hosting = true;
-        hostBtn.textContent = "Parar host";
-        ipInput.value = "127.0.0.1";
-        doConnect(); // o host também entra na sala
-      } catch (e) {
-        statusText.textContent = `${e}`;
-      }
-    } else {
-      net.disconnect();
-      await invoke("stop_host");
-      hosting = false;
-      hostBtn.textContent = "Ser host";
-    }
-  });
-
+  connectBtn.addEventListener("click", () => (active ? doDisconnect() : doConnect()));
+  hostBtn.addEventListener("click", toggleHost);
   volume.addEventListener("input", () => audio.setVolume(Number(volume.value)));
-
-  nameInput.addEventListener("change", () => net.setName(nameInput.value.trim()));
+  nameInput.addEventListener("change", () => {
+    persist();
+    net.setName(nameInput.value.trim());
+  });
 
   setKeyBtn.addEventListener("click", async () => {
     try {
@@ -176,17 +235,15 @@ window.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // --- Boot Sequence Logic ---
+  // Sequência de boot (tema).
   const bootScreen = document.getElementById("boot-screen");
   const mainApp = document.getElementById("main-app");
   if (bootScreen && mainApp) {
     setTimeout(() => {
       bootScreen.classList.add("fade-out");
       mainApp.classList.remove("hidden");
-      setTimeout(() => {
-        bootScreen.remove();
-      }, 500);
-    }, 3500); // 3.5 seconds boot time
+      setTimeout(() => bootScreen.remove(), 500);
+    }, 3500);
   }
 });
 

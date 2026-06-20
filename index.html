@@ -27,7 +27,7 @@
     <!-- MAIN APP -->
     <main class="app hidden" id="main-app">
       <div class="scanlines"></div>
-      
+
       <header class="bar">
         <h1><span class="glitch" data-text="WALKIE_TALKIE">WALKIE_TALKIE</span></h1>
         <div class="status">
@@ -42,24 +42,24 @@
         </label>
 
         <div class="grid">
-          <label>IP_DO_HOST
-            <input id="ip" placeholder="192.168.0.10" class="cyber-input" />
+          <label>SERVIDOR (RELAY)
+            <input id="server" placeholder="wss://seu-relay... ou use HOST LAN" class="cyber-input" />
           </label>
-          <label>PORTA
-            <input id="port" inputmode="numeric" class="cyber-input" />
+          <label>CANAL
+            <input id="room" value="geral" class="cyber-input" />
           </label>
         </div>
 
         <div class="row">
           <button id="connect" class="btn primary-btn">Conectar</button>
-          <button id="host" class="btn ghost-btn">Ser host</button>
+          <button id="host" class="btn ghost-btn">Host LAN</button>
         </div>
         <p id="host-hint" class="hint"></p>
       </section>
 
       <div class="comms-wrapper">
         <p id="talking" class="talking"></p>
-        
+
         <button id="ptt" class="ptt cyber-button">
           <div class="ptt-inner">
             <span class="ptt-icon">🎙</span>
@@ -67,6 +67,8 @@
           </div>
           <div class="ripple"></div>
         </button>
+
+        <p id="roster" class="hint"></p>
       </div>
 
       <section class="card settings cyber-border-dashed">
@@ -79,7 +81,7 @@
           </label>
           <button id="set-key" class="btn ghost-btn small">Aplicar</button>
         </div>
-        <p class="hint">No PC dá para falar segurando a tecla acima mesmo com o app minimizado, ou a barra de espaço com a janela aberta.</p>
+        <p class="hint">No PC: segure a tecla acima (funciona minimizado) ou a barra de espaço com a janela aberta. No celular: segure o botão.</p>
       </section>
     </main>
   </body>
