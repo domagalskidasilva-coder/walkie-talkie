@@ -30,9 +30,12 @@
 
       <header class="bar">
         <h1><span class="glitch" data-text="WALKIE_TALKIE">WALKIE_TALKIE</span></h1>
-        <div class="status">
-          <span id="status-text" class="status-text">Desconectado</span>
-          <span id="status-dot" class="dot"></span>
+        <div class="bar-right">
+          <div class="status">
+            <span id="status-text" class="status-text">Desconectado</span>
+            <span id="status-dot" class="dot"></span>
+          </div>
+          <button id="settings-btn" class="icon-btn" title="Configuração" aria-label="Configuração">⚙</button>
         </div>
       </header>
 
@@ -70,19 +73,38 @@
 
         <p id="roster" class="hint"></p>
       </div>
+    </main>
 
-      <section class="card settings cyber-border-dashed">
+    <!-- PAINEL DE CONFIGURAÇÃO -->
+    <div id="settings-panel" class="settings-overlay hidden">
+      <section class="card cyber-border settings-modal">
+        <div class="modal-head">
+          <h2>// CONFIGURAÇÃO</h2>
+          <button id="settings-close" class="icon-btn" title="Fechar" aria-label="Fechar">✕</button>
+        </div>
+
         <label>GANHO_DE_ÁUDIO (Volume)
           <input id="volume" type="range" min="0" max="1" step="0.05" value="1" class="cyber-range" />
         </label>
+
         <div class="grid">
           <label>BIND_DE_HARDWARE (PC)
             <input id="ptt-key" value="F8" class="cyber-input small-input" />
           </label>
           <button id="set-key" class="btn ghost-btn small">Aplicar</button>
         </div>
-        <p class="hint">No PC: segure a tecla acima (funciona minimizado) ou a barra de espaço com a janela aberta. No celular: segure o botão.</p>
+        <p class="hint">No PC: segure a tecla (funciona minimizado) ou a barra de espaço. No celular: segure o botão.</p>
+
+        <hr class="sep" />
+
+        <label>ATUALIZAÇÃO DO SISTEMA</label>
+        <p class="hint">Versão instalada: <span id="app-version">—</span></p>
+        <div class="row">
+          <button id="check-update" class="btn primary-btn">Verificar atualizações</button>
+        </div>
+        <button id="download-update" class="btn ghost-btn hidden">⬇ Baixar nova versão</button>
+        <p id="update-msg" class="hint"></p>
       </section>
-    </main>
+    </div>
   </body>
 </html>

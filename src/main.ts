@@ -1,11 +1,15 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { getVersion } from "@tauri-apps/api/app";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import * as net from "./net";
 import * as audio from "./audio";
 
 // URL do relay público (preenchida após o deploy). Vazio = use HOST LAN.
 const DEFAULT_RELAY = "";
 const LAN_PORT = 7878;
+// Repositório das releases (usado pela verificação de atualização).
+const REPO = "domagalskidasilva-coder/walkie-talkie";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -23,6 +27,15 @@ let volume: HTMLInputElement;
 let pttKeyInput: HTMLInputElement;
 let setKeyBtn: HTMLButtonElement;
 let hostHint: HTMLElement;
+// Config / atualização
+let settingsBtn: HTMLButtonElement;
+let settingsClose: HTMLButtonElement;
+let settingsPanel: HTMLElement;
+let appVersionEl: HTMLElement;
+let checkUpdateBtn: HTMLButtonElement;
+let downloadUpdateBtn: HTMLButtonElement;
+let updateMsg: HTMLElement;
+let latestUrl = "";
 
 let active = false; // o usuário quer estar conectado
 let hosting = false;
@@ -172,6 +185,64 @@ async function toggleHost() {
   }
 }
 
+// --- Configuração / Atualização ---------------------------------------------
+function openSettings() {
+  settingsPanel.classList.remove("hidden");
+}
+function closeSettings() {
+  settingsPanel.classList.add("hidden");
+}
+
+/** Compara versões "x.y.z": retorna true se `a` for mais nova que `b`. */
+function isNewer(a: string, b: string): boolean {
+  const pa = a.split(".").map((n) => parseInt(n, 10) || 0);
+  const pb = b.split(".").map((n) => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const da = pa[i] ?? 0;
+    const db = pb[i] ?? 0;
+    if (da !== db) return da > db;
+  }
+  return false;
+}
+
+async function checkUpdate() {
+  updateMsg.textContent = "Verificando…";
+  downloadUpdateBtn.classList.add("hidden");
+  let current = "0.0.0";
+  try {
+    current = await getVersion();
+  } catch {
+    /* fora do Tauri */
+  }
+  try {
+    const r = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
+      headers: { Accept: "application/vnd.github+json" },
+    });
+    if (!r.ok) throw new Error(String(r.status));
+    const data = await r.json();
+    const latest = String(data.tag_name || "").replace(/^v/, "");
+    latestUrl = data.html_url || `https://github.com/${REPO}/releases/latest`;
+    if (latest && isNewer(latest, current)) {
+      updateMsg.textContent = `Nova versão disponível: v${latest} (você tem v${current}).`;
+      downloadUpdateBtn.textContent = `⬇ Baixar v${latest}`;
+      downloadUpdateBtn.classList.remove("hidden");
+    } else {
+      updateMsg.textContent = `Você está atualizado (v${current}).`;
+    }
+  } catch {
+    updateMsg.textContent = "Não consegui verificar agora (sem internet?).";
+  }
+}
+
+async function openLatest() {
+  const url = latestUrl || `https://github.com/${REPO}/releases/latest`;
+  try {
+    await openUrl(url);
+  } catch {
+    window.open(url, "_blank");
+  }
+}
+
 // --- Inicialização ----------------------------------------------------------
 window.addEventListener("DOMContentLoaded", () => {
   nameInput = $("name");
@@ -188,9 +259,21 @@ window.addEventListener("DOMContentLoaded", () => {
   pttKeyInput = $("ptt-key");
   setKeyBtn = $("set-key");
   hostHint = $("host-hint");
+  settingsBtn = $("settings-btn");
+  settingsClose = $("settings-close");
+  settingsPanel = $("settings-panel");
+  appVersionEl = $("app-version");
+  checkUpdateBtn = $("check-update");
+  downloadUpdateBtn = $("download-update");
+  updateMsg = $("update-msg");
 
   if (DEFAULT_RELAY) serverInput.value = DEFAULT_RELAY;
   restore();
+
+  // Mostra a versão instalada na config.
+  getVersion()
+    .then((v) => (appVersionEl.textContent = `v${v}`))
+    .catch(() => (appVersionEl.textContent = "—"));
 
   // PTT por toque/mouse.
   pttBtn.addEventListener("pointerdown", (e) => {
@@ -234,6 +317,15 @@ window.addEventListener("DOMContentLoaded", () => {
       statusText.textContent = `${e}`;
     }
   });
+
+  // Configuração / atualização.
+  settingsBtn.addEventListener("click", openSettings);
+  settingsClose.addEventListener("click", closeSettings);
+  settingsPanel.addEventListener("click", (e) => {
+    if (e.target === settingsPanel) closeSettings(); // clicar fora fecha
+  });
+  checkUpdateBtn.addEventListener("click", checkUpdate);
+  downloadUpdateBtn.addEventListener("click", openLatest);
 
   // Sequência de boot (tema).
   const bootScreen = document.getElementById("boot-screen");
